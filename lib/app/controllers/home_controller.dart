@@ -1,5 +1,6 @@
 import 'dart:html' as webFile;
 
+import 'package:file_picker/_internal/file_picker_web.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:yaml/yaml.dart';
@@ -45,7 +46,7 @@ class HomeController extends ChangeNotifier {
   }
 
   void handleUploadFile() async {
-    var picked = await FilePicker.platform.pickFiles(
+    var picked = await FilePickerWeb.platform.pickFiles(
       allowMultiple: false,
       allowedExtensions: ['yaml'],
       type: FileType.custom,
