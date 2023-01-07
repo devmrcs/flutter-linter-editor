@@ -1,12 +1,8 @@
-import 'dart:html' as webFile;
-
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:linter_editor/app/controllers/home_controller.dart';
 import 'package:linter_editor/app/services/linter_service.dart';
-import 'package:yaml_writer/yaml_writer.dart';
 
-import 'domain/lint.dart';
-import 'lint_details_modal.dart';
+import '../lint_details_modal.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -16,26 +12,13 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  Future<List<Lint>>? _future;
-  final lintsSelected = <String, Lint>{};
-  var lints = <Lint>[];
+  final controller = HomeController(service: LintService());
   final ScrollController scrollController = ScrollController();
 
   @override
   void initState() {
     super.initState();
-
-    _future = LintService().getLints();
-  }
-
-  void handleTapLint(Lint lint) {
-    setState(() {
-      if (lintsSelected.containsKey(lint.name)) {
-        lintsSelected.remove(lint.name);
-      } else {
-        lintsSelected[lint.name] = lint;
-      }
-    });
+    controller.fetchLints();
   }
 
   @override
@@ -54,12 +37,11 @@ class _HomeScreenState extends State<HomeScreen> {
           child: Container(
             alignment: Alignment.center,
             constraints: BoxConstraints(maxWidth: 768),
-            child: FutureBuilder(
-              future: _future,
-              builder: (context, snapshot) {
-                if (snapshot.hasData && snapshot.data != null) {
-                  final lints = snapshot.data as List<Lint>;
-                  this.lints = lints;
+            child: AnimatedBuilder(
+              animation: controller,
+              builder: (context, child) {
+                if (controller.lints.isNotEmpty) {
+                  final lints = controller.lints;
 
                   return ScrollConfiguration(
                     behavior: ScrollConfiguration.of(context).copyWith(
@@ -69,17 +51,17 @@ class _HomeScreenState extends State<HomeScreen> {
                       controller: scrollController,
                       itemCount: lints.length,
                       itemBuilder: (context, index) {
-                        final lint = lints[index];
+                        final lint = lints.values.elementAt(index);
                         final List<String> lintsIncompatible = [];
 
                         for (String incompatible in lint.incompatible) {
-                          if (lintsSelected.containsKey(incompatible)) {
+                          if (lints[lint.name]?.isSelected ?? false) {
                             lintsIncompatible.add(incompatible);
                           }
                         }
 
-                        final bool showWarning = lintsIncompatible.isNotEmpty &&
-                            lintsSelected.containsKey(lint.name);
+                        final bool showWarning =
+                            lintsIncompatible.isNotEmpty && lint.isSelected;
 
                         return ListTile(
                           title: Text(
@@ -135,12 +117,14 @@ class _HomeScreenState extends State<HomeScreen> {
                                           color: Colors.red,
                                         ),
                                         SizedBox(width: 4),
-                                        Text(
-                                          "Incompatible with: ${lintsIncompatible.join(", ")}",
-                                          style: TextStyle(
-                                            color: Colors.red,
-                                            fontWeight: FontWeight.w300,
-                                            fontSize: 15,
+                                        Flexible(
+                                          child: Text(
+                                            "Incompatible with: ${lintsIncompatible.join(", ")}",
+                                            style: TextStyle(
+                                              color: Colors.red,
+                                              fontWeight: FontWeight.w300,
+                                              fontSize: 15,
+                                            ),
                                           ),
                                         ),
                                       ],
@@ -150,8 +134,11 @@ class _HomeScreenState extends State<HomeScreen> {
                             ),
                           ),
                           trailing: Checkbox(
-                            value: lintsSelected.containsKey(lint.name),
-                            onChanged: (value) => handleTapLint(lint),
+                            value: lint.isSelected,
+                            onChanged: (value) {
+                              controller.handleSelection(
+                                  lint, value ?? lint.isSelected);
+                            },
                           ),
                           onTap: () => LintDetailsModal.show(context, lint),
                         );
@@ -173,64 +160,21 @@ class _HomeScreenState extends State<HomeScreen> {
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
           FloatingActionButton(
-            backgroundColor: Colors.red.shade800,
-            child: const Icon(Icons.delete),
-            onPressed: () {
-              setState(() {
-                lintsSelected.clear();
-              });
-            },
+            backgroundColor: Colors.blue.shade900,
+            child: const Icon(Icons.done_all_rounded),
+            onPressed: controller.handleSelectAll,
           ),
           SizedBox(height: 8),
           FloatingActionButton(
             backgroundColor: Colors.blue.shade900,
-            child: const Icon(Icons.done_all_rounded),
-            onPressed: () {
-              setState(() {
-                lintsSelected.clear();
-                for (var lint in lints) {
-                  lintsSelected[lint.name] = lint;
-                }
-              });
-            },
+            child: const Icon(Icons.upload_rounded),
+            onPressed: controller.handleUploadFile,
           ),
           SizedBox(height: 8),
           FloatingActionButton(
             backgroundColor: Colors.green.shade900,
-            child: const Icon(Icons.save),
-            onPressed: () {
-              var yamlWriter = YAMLWriter(allowUnquotedStrings: true);
-              final List<Lint> styleLint = lintsSelected.values.toList();
-
-              final Map<String, String> errorsMap = {
-                "missing_required_param": "error",
-                "missing_return": "error"
-              };
-
-              final Map<String, bool> lintsMap = {};
-              for (var element in styleLint) {
-                lintsMap[element.name] = true;
-              }
-
-              var yamlDoc = yamlWriter.write({
-                "analyzer": {
-                  "errors": errorsMap,
-                },
-                "linter": {
-                  "rules": lintsMap,
-                },
-              });
-
-              if (kIsWeb) {
-                var blob = webFile.Blob([yamlDoc], 'text/plain', 'native');
-
-                webFile.AnchorElement(
-                  href: webFile.Url.createObjectUrlFromBlob(blob).toString(),
-                )
-                  ..setAttribute("download", "analysis_options.yaml")
-                  ..click();
-              }
-            },
+            child: const Icon(Icons.download_rounded),
+            onPressed: controller.handleSaveFile,
           ),
           SizedBox(height: 16),
         ],

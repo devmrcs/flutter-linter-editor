@@ -10,8 +10,6 @@ class LintDetailsModal {
     showDialog(
       context: context,
       builder: (BuildContext context) {
-        final theme = Theme.of(context);
-
         return Dialog(
           child: ConstrainedBox(
             constraints: BoxConstraints(

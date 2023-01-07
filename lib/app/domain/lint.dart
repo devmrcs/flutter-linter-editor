@@ -46,6 +46,8 @@ class Lint {
   final String sinceDartSdk;
   final String sinceLinter;
 
+  final bool isSelected;
+
   Lint({
     required this.name,
     required this.description,
@@ -58,6 +60,7 @@ class Lint {
     required this.details,
     required this.sinceDartSdk,
     required this.sinceLinter,
+    this.isSelected = false,
   });
 
   Map<String, dynamic> toMap() {
@@ -95,4 +98,34 @@ class Lint {
   String toJson() => json.encode(toMap());
 
   factory Lint.fromJson(String source) => Lint.fromMap(json.decode(source));
+
+  Lint copyWith({
+    String? name,
+    String? description,
+    String? group,
+    String? maturity,
+    String? state,
+    List<String>? incompatible,
+    List<String>? sets,
+    String? fixStatus,
+    String? details,
+    String? sinceDartSdk,
+    String? sinceLinter,
+    bool? isSelected,
+  }) {
+    return Lint(
+      name: name ?? this.name,
+      description: description ?? this.description,
+      group: group ?? this.group,
+      maturity: maturity ?? this.maturity,
+      state: state ?? this.state,
+      incompatible: incompatible ?? this.incompatible,
+      sets: sets ?? this.sets,
+      fixStatus: fixStatus ?? this.fixStatus,
+      details: details ?? this.details,
+      sinceDartSdk: sinceDartSdk ?? this.sinceDartSdk,
+      sinceLinter: sinceLinter ?? this.sinceLinter,
+      isSelected: isSelected ?? this.isSelected,
+    );
+  }
 }
