@@ -6,6 +6,7 @@ import 'package:linter_editor/app/services/linter_service.dart';
 import 'package:yaml_writer/yaml_writer.dart';
 
 import 'domain/lint.dart';
+import 'lint_details_modal.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -18,6 +19,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<List<Lint>>? _future;
   final lintsSelected = <String, Lint>{};
   var lints = <Lint>[];
+  final ScrollController scrollController = ScrollController();
 
   @override
   void initState() {
@@ -43,111 +45,128 @@ class _HomeScreenState extends State<HomeScreen> {
         backgroundColor: Theme.of(context).primaryColor,
         elevation: 0.0,
         title: const Text(
-          "Linter Editor",
+          "Flutter Linter Editor",
         ),
       ),
-      body: FutureBuilder(
-        future: _future,
-        builder: (context, snapshot) {
-          if (snapshot.hasData && snapshot.data != null) {
-            final lints = snapshot.data as List<Lint>;
-            this.lints = lints;
+      body: Scrollbar(
+        controller: scrollController,
+        child: Center(
+          child: Container(
+            alignment: Alignment.center,
+            constraints: BoxConstraints(maxWidth: 768),
+            child: FutureBuilder(
+              future: _future,
+              builder: (context, snapshot) {
+                if (snapshot.hasData && snapshot.data != null) {
+                  final lints = snapshot.data as List<Lint>;
+                  this.lints = lints;
 
-            return ListView.builder(
-              itemCount: lints.length,
-              itemBuilder: (context, index) {
-                final lint = lints[index];
-                final List<String> lintsIncompatible = [];
-
-                for (String incompatible in lint.incompatible) {
-                  if (lintsSelected.containsKey(incompatible)) {
-                    lintsIncompatible.add(incompatible);
-                  }
-                }
-
-                final bool showWarning = lintsIncompatible.isNotEmpty &&
-                    lintsSelected.containsKey(lint.name);
-
-                return ListTile(
-                  title: Text(
-                    lint.name,
-                    style: TextStyle(
-                      color: Colors.blue.shade900,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 15,
+                  return ScrollConfiguration(
+                    behavior: ScrollConfiguration.of(context).copyWith(
+                      scrollbars: false,
                     ),
-                  ),
-                  subtitle: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 4),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Builder(builder: (context) {
-                          if (lint.sets.isEmpty && lint.fixStatus != 'hasFix') {
-                            return const SizedBox.shrink();
+                    child: ListView.builder(
+                      controller: scrollController,
+                      itemCount: lints.length,
+                      itemBuilder: (context, index) {
+                        final lint = lints[index];
+                        final List<String> lintsIncompatible = [];
+
+                        for (String incompatible in lint.incompatible) {
+                          if (lintsSelected.containsKey(incompatible)) {
+                            lintsIncompatible.add(incompatible);
                           }
-                          final List<Widget> widgets = [];
+                        }
 
-                          for (String set in lint.sets)
-                            widgets.add(BadgeLint(set: set));
+                        final bool showWarning = lintsIncompatible.isNotEmpty &&
+                            lintsSelected.containsKey(lint.name);
 
-                          if (lint.fixStatus == 'hasFix')
-                            widgets.add(const BadgeLint(
-                              set: 'has fix',
-                            ));
-
-                          return Wrap(
-                            spacing: 8,
-                            direction: Axis.horizontal,
-                            children: widgets,
-                          );
-                        }),
-                        Text(
-                          lint.description,
-                          style: TextStyle(
-                            color: Colors.black87,
-                            fontWeight: FontWeight.w300,
-                            fontSize: 15,
+                        return ListTile(
+                          title: Text(
+                            lint.name,
+                            style: TextStyle(
+                              color: Colors.blue.shade900,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 15,
+                            ),
                           ),
-                        ),
-                        if (showWarning)
-                          Padding(
+                          subtitle: Padding(
                             padding: const EdgeInsets.symmetric(vertical: 4),
-                            child: Row(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Icon(
-                                  Icons.warning_rounded,
-                                  color: Colors.red,
-                                ),
-                                SizedBox(width: 4),
+                                Builder(builder: (context) {
+                                  if (lint.sets.isEmpty &&
+                                      lint.fixStatus != 'hasFix') {
+                                    return const SizedBox.shrink();
+                                  }
+                                  final List<Widget> widgets = [];
+
+                                  for (String set in lint.sets)
+                                    widgets.add(BadgeLint(set: set));
+
+                                  if (lint.fixStatus == 'hasFix')
+                                    widgets.add(const BadgeLint(
+                                      set: 'has fix',
+                                    ));
+
+                                  return Wrap(
+                                    spacing: 8,
+                                    direction: Axis.horizontal,
+                                    children: widgets,
+                                  );
+                                }),
                                 Text(
-                                  "Incompatible with: ${lintsIncompatible.join(", ")}",
+                                  lint.description,
                                   style: TextStyle(
-                                    color: Colors.red,
+                                    color: Colors.black87,
                                     fontWeight: FontWeight.w300,
                                     fontSize: 15,
                                   ),
                                 ),
+                                if (showWarning)
+                                  Padding(
+                                    padding:
+                                        const EdgeInsets.symmetric(vertical: 4),
+                                    child: Row(
+                                      children: [
+                                        Icon(
+                                          Icons.warning_rounded,
+                                          color: Colors.red,
+                                        ),
+                                        SizedBox(width: 4),
+                                        Text(
+                                          "Incompatible with: ${lintsIncompatible.join(", ")}",
+                                          style: TextStyle(
+                                            color: Colors.red,
+                                            fontWeight: FontWeight.w300,
+                                            fontSize: 15,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
                               ],
                             ),
                           ),
-                      ],
+                          trailing: Checkbox(
+                            value: lintsSelected.containsKey(lint.name),
+                            onChanged: (value) => handleTapLint(lint),
+                          ),
+                          onTap: () => LintDetailsModal.show(context, lint),
+                        );
+                      },
                     ),
-                  ),
-                  trailing: Checkbox(
-                    value: lintsSelected.containsKey(lint.name),
-                    onChanged: (value) => handleTapLint(lint),
-                  ),
-                  onTap: () => handleTapLint(lint),
-                );
+                  );
+                } else {
+                  return const Center(
+                    child: CircularProgressIndicator(),
+                  );
+                }
               },
-            );
-          } else {
-            return const Center(
-              child: CircularProgressIndicator(),
-            );
-          }
-        },
+            ),
+          ),
+        ),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.endDocked,
       floatingActionButton: Column(
