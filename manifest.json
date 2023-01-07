@@ -1,11 +1,11 @@
 {
-    "name": "linter_editor",
-    "short_name": "linter_editor",
+    "name": "Flutter Linter Editor",
+    "short_name": "Flutter Linter Editor",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "description": "Generate your analysis_options file from the linter rules you want to use.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [
