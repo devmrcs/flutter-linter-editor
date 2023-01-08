@@ -17,6 +17,8 @@ class HomeController extends ChangeNotifier {
   final LintService service;
   final Map<String, Lint> lints = {};
 
+  String uploadMessage = '';
+
   void fetchLints() async {
     final lints = await service.fetchLints();
     this.lints.addAll(lints);
@@ -46,37 +48,49 @@ class HomeController extends ChangeNotifier {
   }
 
   void handleUploadFile() async {
-    var picked = await FilePickerWeb.platform.pickFiles(
-      allowMultiple: false,
-      allowedExtensions: ['yaml'],
-      type: FileType.custom,
-      withData: true,
-    );
+    uploadMessage = '';
+    try {
+      var picked = await FilePickerWeb.platform.pickFiles(
+        allowMultiple: false,
+        allowedExtensions: ['yaml'],
+        type: FileType.custom,
+        withData: true,
+      );
 
-    if (picked != null && picked.files.isNotEmpty) {
-      final file = picked.files.first;
-      final fileString = String.fromCharCodes(file.bytes!);
+      if (picked != null && picked.files.isNotEmpty) {
+        final file = picked.files.first;
 
-      final fileYaml = loadYaml(fileString) as Map;
+        if (file.extension != 'yaml') {
+          throw Exception('Invalid file type');
+        }
 
-      final lintsFromFile = fileYaml['linter']['rules'];
+        final fileString = String.fromCharCodes(file.bytes!);
 
-      if (lintsFromFile is Map) {
-        lintsFromFile.forEach((key, value) {
-          if (value == true && lints.containsKey(key)) {
-            lints[key] = lints[key]!.copyWith(isSelected: true);
-          }
-        });
-      } else if (lintsFromFile is List) {
-        for (var lint in lintsFromFile) {
-          if (lints.containsKey(lint)) {
-            lints[lint] = lints[lint]!.copyWith(isSelected: true);
+        final fileYaml = loadYaml(fileString) as Map;
+
+        final lintsFromFile = fileYaml['linter']['rules'];
+
+        if (lintsFromFile is Map) {
+          lintsFromFile.forEach((key, value) {
+            if (value == true && lints.containsKey(key)) {
+              lints[key] = lints[key]!.copyWith(isSelected: true);
+            }
+          });
+        } else if (lintsFromFile is List) {
+          for (var lint in lintsFromFile) {
+            if (lints.containsKey(lint)) {
+              lints[lint] = lints[lint]!.copyWith(isSelected: true);
+            }
           }
         }
-      }
-    }
 
-    notifyListeners();
+        uploadMessage = 'File uploaded successfully';
+      }
+    } catch (e) {
+      uploadMessage = 'Error: $e';
+    } finally {
+      notifyListeners();
+    }
   }
 
   void handleSaveFile() async {

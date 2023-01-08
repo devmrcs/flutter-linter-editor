@@ -3,7 +3,7 @@ import 'package:markdown_widget/config/highlight_themes.dart'
     as highlight_themes;
 import 'package:markdown_widget/markdown_widget.dart';
 
-import 'domain/lint.dart';
+import '../domain/lint.dart';
 
 class LintDetailsModal {
   static show(BuildContext context, Lint lint) {
@@ -16,6 +16,7 @@ class LintDetailsModal {
               maxWidth: 768,
             ),
             child: ListView(
+              physics: BouncingScrollPhysics(),
               shrinkWrap: true,
               children: [
                 Container(
@@ -56,6 +57,7 @@ class LintDetailsModal {
                     vertical: 8,
                   ),
                   child: MarkdownWidget(
+                    physics: ClampingScrollPhysics(),
                     shrinkWrap: true,
                     selectable: true,
                     data: lint.details,
